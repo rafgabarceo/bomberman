@@ -18,5 +18,31 @@
     <ClCompile Include="main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="level0.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="level1.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="level3.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Block.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="LEVEL0_DEFINES.h">
+      <Filter>Resource Files\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="USER.h">
+      <Filter>Resource Files\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BLOCK.h">
+      <Filter>Resource Files\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WINDOW_CONSTANTS.h">
+      <Filter>Resource Files\Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
