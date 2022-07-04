@@ -6,9 +6,12 @@
 
 void level0_init(struct mfb_window* window, uint32_t* framebuffer)
 {
+	struct mfb_timer* ticks = mfb_timer_create();
 
 	mfb_set_keyboard_callback(window, level0_keyboard_callback);
 	USER_DAT* user = (USER_DAT*)mfb_get_user_data(window);
+	user->user_timer = ticks; // save the timer into user data to be picked up from the callback.
+
 	// Loads the corner image
 	FIBITMAP* corner_FBM = FreeImage_Load(FIF_PNG, CORNER_BLOCK_LOC, PNG_DEFAULT);
 	FreeImage_FlipVertical(corner_FBM);
@@ -60,10 +63,10 @@ void level0_init(struct mfb_window* window, uint32_t* framebuffer)
 	{
 		bombs[i] = (Block){
 			.imageData = bombBits,
-			.state = BROKEN,
+			.state = PRESENT,
 			.type = BOMB_BLOCK,
 			.x_position = 56+(5*i),
-			.y_position = BACKGROUND_HEIGHT + 56
+			.y_position = BACKGROUND_HEIGHT + 23
 		};
 	}
 
@@ -78,7 +81,8 @@ void level0_init(struct mfb_window* window, uint32_t* framebuffer)
 			.state = PRESENT,
 			.type = WALL_BLOCK,
 			.x_position = cornersX[i],
-			.y_position = cornersY[i]
+			.y_position = cornersY[i],
+			.timerIsInitialized = false
 		};
 	}
 
@@ -196,7 +200,33 @@ void level0_init(struct mfb_window* window, uint32_t* framebuffer)
 	{
 
 		int state = mfb_update_ex(window, (void*)framebuffer, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+		/*
 		
+			NOTE: THIS ROUTINE CAUSES A MEMORY LEAK DUE TO A FREE() HEAP ERROR IN MINIFB.
+		
+		*/
+		if (user->bombsDrop == 0) // Special case to avoid -1 array access.
+		{
+			if (user->bombs[0].timerIsInitialized == true)
+			{
+				if (mfb_timer_now(user->bombs[0].blocktimer) > 3.00)
+				{
+					user->bombs[0].state = USED; // Will no longer be generated.
+					// mfb_timer_destroy(user->bombs[0].blocktimer); // Destroy the timer.
+				}
+			}
+		}
+		else if (user->bombs[user->bombsDrop - 1].timerIsInitialized == true) // subtract by one to delete the previous bomb place
+		{
+			if (mfb_timer_now(user->bombs[user->bombsDrop - 1].blocktimer) > 3.00)
+			{
+				user->bombs[user->bombsDrop - 1].state = USED; // Will no longer be generated.
+				// mfb_timer_destroy(user->bombs[user->bombsDrop - 1].blocktimer); // Destroy the timer. Causes heap crash
+			}
+		}
+		// printf("Delta: %f \n", mfb_timer_now(ticks));
+
 		// Load the background into the page. 
 		for (int i = 0; i < (BACKGROUND_HEIGHT * BACKGROUND_WIDTH * 4); i += 4)
 		{
@@ -345,6 +375,7 @@ void generate_tiles(struct mfb_window* window, uint32_t* framebuffer, Block* til
 void level0_keyboard_callback(struct mfb_window* window, mfb_key key, mfb_key_mod mod, bool isPressed)
 {
 	USER_DAT* user = (USER_DAT*)mfb_get_user_data(window);
+
 	// Determine the collision properties for the next movement.
 
 	user->user_pos_x_prev = user->user_pos_x;
@@ -370,6 +401,11 @@ void level0_keyboard_callback(struct mfb_window* window, mfb_key key, mfb_key_mo
 		}
 		else if (key == KB_KEY_A) // place da bomb
 		{
+
+			// Initiliaze bomb countdown
+			struct mfb_timer* bombTime = mfb_timer_create();
+			user->bombs[user->bombsDrop].blocktimer = bombTime; // Attach the bomb timer
+			user->bombs[user->bombsDrop].timerIsInitialized = true;
 			user->bombs[user->bombsDrop].x_position = user->user_pos_x;
 			user->bombs[user->bombsDrop].y_position = user->user_pos_y;
 			user->bombsDrop++;
@@ -418,10 +454,7 @@ void generate_player(struct mfb_window* window, uint32_t* framebuffer)
 			if (pixel) framebuffer[BACKGROUND_WIDTH * (i + user->user_pos_y) + (j + user->user_pos_x)] = pixel; // access the location in the framebuffer that we want to overwrite. 
 		}
 	}
-
-
-
-	printf("x: %i, y: %i \n", user->user_pos_x, user->user_pos_y);
+	// printf("x: %i, y: %i \n", user->user_pos_x, user->user_pos_y);
 }
 
 void generate_collision_data(Block* wallsTop, Block*wallsBottom, Block*wallsRight, Block* wallsLeft, Block* tiles, int* collisionX, int* collisionY)
@@ -466,7 +499,7 @@ void generate_bomb(struct mfb_window* mainWindow, uint32_t* framebuffer, Block* 
 				uint8_t g = bomb[user->bombsDrop].imageData[BLOCK_WIDTH * 3 * i + 3 * j + 1];
 				uint8_t b = bomb[user->bombsDrop].imageData[BLOCK_WIDTH * 3 * i + 3 * j];
 				uint32_t pixel = (r << 16) | (g << 8) | b;
-				if (pixel) framebuffer[BACKGROUND_WIDTH * (i + user->bombs[k].y_position) + (j + user->bombs[k].x_position)] = pixel; // access the location in the framebuffer that we want to overwrite. 
+				if (pixel && user->bombs[k].state == PRESENT) framebuffer[BACKGROUND_WIDTH * (i + user->bombs[k].y_position) + (j + user->bombs[k].x_position)] = pixel; // access the location in the framebuffer that we want to overwrite. 
 			}
 		}
 	}

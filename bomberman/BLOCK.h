@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define WALL_WIDTH 56
 #define WALL_HEIGHT 56
@@ -39,11 +40,14 @@ typedef enum BLOCK_TYPES {
 */
 typedef enum BLOCK_STATE {
 	BROKEN = 0,
-	PRESENT = 1
+	PRESENT = 1,
+	USED = 2
 } block_state;
 
 typedef struct Block {
 	uint8_t* imageData;
+	struct mfb_timer* blocktimer;
+	bool timerIsInitialized;
 	int x_position;
 	int y_position; 
 	int type;

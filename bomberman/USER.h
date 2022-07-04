@@ -28,7 +28,7 @@ typedef struct USER_DAT {
 	int user_pos_x;
 	int user_pos_y;
 	int user_score;
-	int user_timer;
+	struct mfb_timer* user_timer;
 	int bombsDrop;
 	Block* bombs;
 	collision collision_status_top;

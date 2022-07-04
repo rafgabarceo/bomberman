@@ -75,4 +75,5 @@ void generate_player(struct mfb_window*, uint32_t*);
 void generate_collision_data(Block*, Block*, Block*, Block*, Block*, int*, int*);
 void generate_crates(struct mfb_window*, uint32_t*, Block*);
 void generate_bomb(struct mfb_window*, uint32_t*, Block*);
+void destroy_bomb(struct mfb_window*, uint32_t*, Block*);
 #endif // LEVEL_0_H

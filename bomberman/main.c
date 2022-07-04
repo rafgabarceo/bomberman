@@ -8,7 +8,7 @@
 
 int main()
 {
-	struct mfb_window* window = mfb_open_ex("My display", WINDOW_WIDTH, WINDOW_HEIGHT, WF_RESIZABLE);
+	struct mfb_window* window = mfb_open_ex("Bomberman", WINDOW_WIDTH, WINDOW_HEIGHT, WF_RESIZABLE);
 	FIBITMAP* user_FBM = FreeImage_Load(FIF_PNG,USER_LOC, PNG_DEFAULT);
 	FreeImage_FlipVertical(user_FBM);
 	uint8_t* userBits = FreeImage_GetBits(user_FBM);
