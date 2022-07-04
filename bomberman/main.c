@@ -21,7 +21,8 @@ int main()
 		.user_pos_x = 112,
 		.user_pos_y = 56,
 		.user_score = 0,
-		.user_timer = 0
+		.user_timer = 0,
+		.bombsDrop = 0
 	};
 
 	mfb_set_user_data(window, (void*)&user); // Attach user data to the window
