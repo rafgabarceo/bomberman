@@ -29,7 +29,11 @@ int main()
 
 	uint32_t* buffer = (uint32_t*) malloc(WINDOW_WIDTH * WINDOW_HEIGHT * 4);
 	
-	level0_init(window, buffer);
+	while (1)
+	{
+		level0_init(window, buffer);
+	}
+
 	
 	return 0;
 }
