@@ -9,12 +9,32 @@
 
 #define BACKGROUND_LOC "assets/airbg.png"
 #define CORNER_BLOCK_LOC "assets/air_corner.png"
+#define CRATE_BLOCK_LOC "assets/crate.png"
 #define KEY_LOC "assets/air_key.png"
 #define TILE_LOC "assets/air_tile_square_border.png"
 #define WALL_LOC "assets/air_wall.png"
 #define CRATE_LOC "assets/crate.png"
+#define BOMB_LOC "assets/bomb.png"
 #define COLLISION_OFFSET 58
+#define CRATE_COUNT 13
+#define BOMB_AMMO 23
 
+// Access: 2*row + 1
+const CRATE_COORDINATE_DATA[] = {
+	224,56,
+	280,56,
+	336,56,
+	280,112,
+	280,168,
+	56,280,
+	56,336, 
+	56,393, 
+	56,448,
+	728,336,
+	672,392,
+	784,392,
+	728,448
+};
 /*
 
 Window data and framebuffer data should be passed.
@@ -53,4 +73,6 @@ The fourth one checks if it is currently pressed.
 void level0_keyboard_callback(struct mfb_window*, mfb_key, mfb_key_mod, bool);
 void generate_player(struct mfb_window*, uint32_t*);
 void generate_collision_data(Block*, Block*, Block*, Block*, Block*, int*, int*);
+void generate_crates(struct mfb_window*, uint32_t*, Block*);
+void generate_bomb(struct mfb_window*, uint32_t*, Block*);
 #endif // LEVEL_0_H

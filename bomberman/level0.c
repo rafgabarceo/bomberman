@@ -6,7 +6,9 @@
 
 void level0_init(struct mfb_window* window, uint32_t* framebuffer)
 {
+
 	mfb_set_keyboard_callback(window, level0_keyboard_callback);
+	USER_DAT* user = (USER_DAT*)mfb_get_user_data(window);
 	// Loads the corner image
 	FIBITMAP* corner_FBM = FreeImage_Load(FIF_PNG, CORNER_BLOCK_LOC, PNG_DEFAULT);
 	FreeImage_FlipVertical(corner_FBM);
@@ -24,6 +26,10 @@ void level0_init(struct mfb_window* window, uint32_t* framebuffer)
 	FreeImage_FlipVertical(background_FBM);
 	uint8_t* backgroundBits = FreeImage_GetBits(background_FBM);
 
+	FIBITMAP* bomb_FBM = FreeImage_Load(FIF_PNG, BOMB_LOC, PNG_DEFAULT);
+	FreeImage_FlipVertical(bomb_FBM);
+	uint8_t* bombBits = FreeImage_GetBits(bomb_FBM);
+
 	FIBITMAP* tiles_FBM = FreeImage_Load(FIF_PNG, TILE_LOC, PNG_DEFAULT);
 	FreeImage_FlipVertical(tiles_FBM);
 	uint8_t* tileBits = FreeImage_GetBits(tiles_FBM);
@@ -32,16 +38,36 @@ void level0_init(struct mfb_window* window, uint32_t* framebuffer)
 	FreeImage_FlipVertical(player_FBM);
 	uint8_t* playerBits = FreeImage_GetBits(player_FBM);
 
+	FIBITMAP* crate_FBM = FreeImage_Load(FIF_PNG, CRATE_BLOCK_LOC, PNG_DEFAULT);
+	FreeImage_FlipVertical(crate_FBM);
+	uint8_t* crateBits = FreeImage_GetBits(crate_FBM);
+
 	static int cornersX[4] = { 0, // X corners coordinates
 							BACKGROUND_WIDTH - 56,
 							0,
 							BACKGROUND_WIDTH - 56
 	};
+
 	static int cornersY[4] = { 0, // Y corners coordinates
 								0,
 								BACKGROUND_HEIGHT - 56,
 								BACKGROUND_HEIGHT - 56
 	};
+
+	Block bombs[BOMB_AMMO];
+
+	for (int i = 0; i < BOMB_AMMO; i++)
+	{
+		bombs[i] = (Block){
+			.imageData = bombBits,
+			.state = BROKEN,
+			.type = BOMB_BLOCK,
+			.x_position = 56+(5*i),
+			.y_position = BACKGROUND_HEIGHT + 56
+		};
+	}
+
+	user->bombs = bombs;
 
 	// Generate the metadata for the corner blocks
 	Block corners[4];
@@ -53,6 +79,23 @@ void level0_init(struct mfb_window* window, uint32_t* framebuffer)
 			.type = WALL_BLOCK,
 			.x_position = cornersX[i],
 			.y_position = cornersY[i]
+		};
+	}
+
+	static int cratesX[44];
+	static int cratesY[44];
+
+
+	// Generate crate data
+	Block crates[CRATE_COUNT];
+	for (int i = 0; i < CRATE_COUNT; i++)
+	{
+		crates[i] = (Block){
+		.imageData = crateBits,
+		.state = PRESENT,
+		.type = BREAKABLE_BLOCK,
+		.x_position = CRATE_COORDINATE_DATA[2*i],
+		.y_position = CRATE_COORDINATE_DATA[2*i + 1]
 		};
 	}
 
@@ -159,10 +202,23 @@ void level0_init(struct mfb_window* window, uint32_t* framebuffer)
 		{
 			framebuffer[i / 4] = (backgroundBits[i + 2] << 16) | (backgroundBits[i + 1] << 8) | (backgroundBits[i]);
 		}
-		
+
+		for (int i = (BACKGROUND_HEIGHT * BACKGROUND_WIDTH * 4); i < (WINDOW_HEIGHT * WINDOW_WIDTH * 4); i += 4)
+		{
+			framebuffer[i / 4] = 0xFFFFFF;
+		}
+
+		generate_crates(window, framebuffer, crates);
 		generate_walls_and_corners(window, framebuffer, wallsTop, wallsBottom, wallsRight, wallsLeft, corners);
 		generate_tiles(window, framebuffer, tiles, tiles1, tiles2, tiles3);
 		generate_player(window, framebuffer);
+		generate_bomb(window, framebuffer, bombs);
+
+		if (user->bombsDrop == BOMB_AMMO-1)
+		{
+			printf("Out of bombs. Exiting.");
+			break; // exit to game
+		}
 
 		if (state < 0)
 		{
@@ -310,7 +366,13 @@ void level0_keyboard_callback(struct mfb_window* window, mfb_key key, mfb_key_mo
 		}
 		else if (key == KB_KEY_UP)
 		{
-				user->user_pos_y -= USER_MOVEMENT_L0;
+			user->user_pos_y -= USER_MOVEMENT_L0;
+		}
+		else if (key == KB_KEY_A) // place da bomb
+		{
+			user->bombs[user->bombsDrop].x_position = user->user_pos_x;
+			user->bombs[user->bombsDrop].y_position = user->user_pos_y;
+			user->bombsDrop++;
 		}
 	}
 
@@ -327,6 +389,16 @@ void level0_keyboard_callback(struct mfb_window* window, mfb_key key, mfb_key_mo
 	else if ((user->user_pos_y == 0) || (user->user_pos_y == 560))
 	{
 		user->user_pos_y = user->user_pos_y_prev;
+	}
+
+	// Check if any coordinates hit the crate data.
+	for (int i = 0; i < CRATE_COUNT; i++)
+	{
+		if (user->user_pos_y == CRATE_COORDINATE_DATA[2 * i + 1] && user->user_pos_x == CRATE_COORDINATE_DATA[2 * i])
+		{
+			user->user_pos_y = user->user_pos_y_prev;
+			user->user_pos_x = user->user_pos_x_prev;
+		}
 	}
 }
 
@@ -358,4 +430,44 @@ void generate_collision_data(Block* wallsTop, Block*wallsBottom, Block*wallsRigh
 		Generate x, y positions for the walls
 		Generate x, y positions for the tiles
 	*/
+}
+
+void generate_crates(struct mfb_window* mainWindow, uint32_t* framebuffer, Block* crates)
+{
+	for (int k = 0; k < CRATE_COUNT; k++)
+	{
+		if (crates[k].state != BROKEN)
+		{
+			for (int i = 0; i < BLOCK_HEIGHT; i++)
+			{
+				for (int j = 0; j < BLOCK_WIDTH; j++)
+				{
+					uint8_t r = crates[k].imageData[BLOCK_WIDTH * 3 * i + 3 * j + 2];
+					uint8_t g = crates[k].imageData[BLOCK_WIDTH * 3 * i + 3 * j + 1];
+					uint8_t b = crates[k].imageData[BLOCK_WIDTH * 3 * i + 3 * j];
+					uint32_t pixel = (r << 16) | (g << 8) | b;
+					if (pixel) framebuffer[BACKGROUND_WIDTH * (i + crates[k].y_position) + (j + crates[k].x_position)] = pixel; // access the location in the framebuffer that we want to overwrite. 
+				}
+			}
+		}
+
+	}
+}
+void generate_bomb(struct mfb_window* mainWindow, uint32_t* framebuffer, Block* bomb)
+{
+	USER_DAT* user = (USER_DAT*)mfb_get_user_data(mainWindow);
+	for (int k = 0; k < BOMB_AMMO; k++)
+	{
+		for (int i = 0; i < BLOCK_HEIGHT; i++)
+		{
+			for (int j = 0; j < BLOCK_WIDTH; j++)
+			{
+				uint8_t r = bomb[user->bombsDrop].imageData[BLOCK_WIDTH * 3 * i + 3 * j + 2];
+				uint8_t g = bomb[user->bombsDrop].imageData[BLOCK_WIDTH * 3 * i + 3 * j + 1];
+				uint8_t b = bomb[user->bombsDrop].imageData[BLOCK_WIDTH * 3 * i + 3 * j];
+				uint32_t pixel = (r << 16) | (g << 8) | b;
+				if (pixel) framebuffer[BACKGROUND_WIDTH * (i + user->bombs[k].y_position) + (j + user->bombs[k].x_position)] = pixel; // access the location in the framebuffer that we want to overwrite. 
+			}
+		}
+	}
 }

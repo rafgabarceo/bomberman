@@ -11,6 +11,7 @@ Information such as this should be passed to each respective level function.
 #ifndef USER_H
 #define USER_H
 #include <stdint.h>
+#include "BLOCK.h"
 
 #define USER_LOC "assets/user_black.png"
 #define USER_MOVEMENT_L0 56
@@ -28,6 +29,8 @@ typedef struct USER_DAT {
 	int user_pos_y;
 	int user_score;
 	int user_timer;
+	int bombsDrop;
+	Block* bombs;
 	collision collision_status_top;
 	collision collision_status_bottom;
 	collision collision_status_right;
