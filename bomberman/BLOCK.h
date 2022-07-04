@@ -26,7 +26,8 @@ typedef enum BLOCK_TYPES {
 	BREAKABLE_BLOCK = 2,
 	WALL_BLOCK = 3,
 	BORDER_BLOCK = 4,
-	EXPLOSION_BLOCK = 5
+	EXPLOSION_BLOCK = 5,
+	BOMB_BLOCK = 6
 } block_type;
 
 /*
